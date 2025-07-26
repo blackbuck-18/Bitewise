@@ -1,1 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitewise - Eat Smart, Live Wise</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .hero-bg {
+            background-color: #F7FDF8;
+        }
+    </style>
+</head>
+<body class="bg-white text-gray-800">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="text-2xl font-bold text-green-600">
+                Bitewise
+            </div>
+            <div>
+                <a href="#features" class="text-gray-600 hover:text-green-600 px-4">Features</a>
+                <a href="#about" class="text-gray-600 hover:text-green-600 px-4">About</a>
+                <a href="#" class="bg-green-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-green-700 transition duration-300">Launch App</a>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <main>
+        <section class="hero-bg py-20">
+            <div class="container mx-auto px-6 text-center">
+                <h1 class="text-4xl md:text-6xl font-bold text-gray-800 leading-tight">Eat Smart, Live Wise.</h1>
+                <p class="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">Finally understand what's in your food. Bitewise translates confusing nutritional labels into clear, simple insights, helping you make healthier choices effortlessly.</p>
+                <div class="mt-8">
+                    <a href="#" class="bg-green-600 text-white font-bold py-3 px-8 rounded-full hover:bg-green-700 transition duration-300 text-lg">Get Started - It's Free</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section id="features" class="py-20 bg-white">
+            <div class="container mx-auto px-6">
+                <h2 class="text-3xl font-bold text-center mb-12">How Bitewise Helps You</h2>
+                <div class="grid md:grid-cols-3 gap-12 text-center">
+                    <!-- Feature 1 -->
+                    <div class="feature">
+                        <div class="flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mx-auto mb-4">
+                             <svg class="h-8 w-8 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold mb-2">Smart Scanning</h3>
+                        <p class="text-gray-600">Use your camera to scan barcodes or take a photo of your food. We'll instantly analyze it for you.</p>
+                    </div>
+                    <!-- Feature 2 -->
+                    <div class="feature">
+                         <div class="flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mx-auto mb-4">
+                            <svg class="h-8 w-8 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold mb-2">Personalized Insights</h3>
+                        <p class="text-gray-600">Set your dietary goals and allergies. Get alerts for harmful ingredients and tips for healthier alternatives.</p>
+                    </div>
+                    <!-- Feature 3 -->
+                    <div class="feature">
+                         <div class="flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mx-auto mb-4">
+                           <svg class="h-8 w-8 text-green-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-semibold mb-2">Track Your Progress</h3>
+                        <p class="text-gray-600">Log your meals and see beautiful visualizations of your nutritional intake over time.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+         <!-- About Section -->
+        <section id="about" class="py-20 bg-gray-50">
+            <div class="container mx-auto px-6">
+                 <h2 class="text-3xl font-bold text-center mb-12">About The Project</h2>
+                 <p class="max-w-3xl mx-auto text-center text-gray-600">
+                    Bitewise was born from a passion for health and technology. It aims to combat the confusion caused by misleading food labels and empower everyone to take control of their health. This project is being actively developed by an aspiring AI/ML engineer dedicated to creating solutions that make a real-world impact.
+                 </p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-10">
+        <div class="container mx-auto px-6 text-center">
+            <p>&copy; 2025 Bitewise. All Rights Reserved.</p>
+            <p class="text-sm text-gray-400 mt-2">Developed with ❤️ by Bhukya Krishna Chaitanya</p>
+        </div>
+    </footer>
+
+</body>
+</html>
 
