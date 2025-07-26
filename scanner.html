@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitewise Scanner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        #qr-reader {
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+        }
+        #qr-reader-results {
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="index.html" class="text-2xl font-bold text-green-600">
+                Bitewise
+            </a>
+            <a href="index.html" class="text-gray-600 hover:text-green-600 px-4">&larr; Back to Home</a>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-12">
+        <div class="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-md">
+            
+            <div class="text-center">
+                <h1 class="text-2xl font-bold text-gray-800">Scan a Product Barcode</h1>
+                <p class="text-gray-500 mt-2">Center the product's barcode in the box below.</p>
+            </div>
+            
+            <!-- Scanner Element -->
+            <div id="qr-reader" class="w-full h-auto mt-6"></div>
+            
+            <!-- Start/Stop Button -->
+            <div class="text-center mt-4">
+                <button id="start-scan-btn" class="bg-green-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-green-700 transition duration-300">Start Scan</button>
+            </div>
+
+            <!-- Result Section -->
+            <div id="result-section" class="mt-8 hidden">
+                <h2 class="text-xl font-bold text-center">Scan Result</h2>
+                <div id="loading-spinner" class="text-center p-4 hidden">
+                    <p class="text-gray-600">Fetching product data...</p>
+                </div>
+                <div id="product-info" class="mt-4 p-4 bg-gray-50 rounded-lg">
+                    <!-- Product data will be inserted here -->
+                </div>
+                <div id="error-message" class="mt-4 p-4 bg-red-100 text-red-700 rounded-lg hidden">
+                    <!-- Error messages will be shown here -->
+                </div>
+            </div>
+
+        </div>
+    </main>
+    
+    <script>
+        // --- DOM Elements ---
+        const startScanBtn = document.getElementById('start-scan-btn');
+        const resultSection = document.getElementById('result-section');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const productInfoDiv = document.getElementById('product-info');
+        const errorMessageDiv = document.getElementById('error-message');
+
+        let html5QrCode;
+
+        // --- Event Listener for the Scan Button ---
+        startScanBtn.addEventListener('click', () => {
+            startScanBtn.disabled = true;
+            startScanBtn.textContent = "Starting Camera...";
+            startScanBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            // Initialize the QR Code scanner
+            html5QrCode = new Html5Qrcode("qr-reader");
+            startScanner();
+        });
+
+        // --- Function to Start the Scanner ---
+        function startScanner() {
+            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            // We want to use the back camera ('environment')
+            const cameraConfig = { facingMode: "environment" };
+
+            html5QrCode.start(cameraConfig, config, onScanSuccess, onScanFailure)
+                .then(() => {
+                    startScanBtn.textContent = "Scanning...";
+                    console.log("Scanner started successfully.");
+                })
+                .catch(err => {
+                    console.error(`Unable to start scanning, error: ${err}`);
+                    productInfoDiv.innerHTML = `<p class="text-red-500">Error: Could not start the camera. Please grant camera permissions and try again.</p>`;
+                    startScanBtn.textContent = "Camera Error";
+                });
+        }
+        
+        // --- Success Callback ---
+        // This function runs when a barcode is successfully scanned
+        function onScanSuccess(decodedText, decodedResult) {
+            console.log(`Scan result: ${decodedText}`);
+            
+            // Stop scanning after a successful scan
+            html5QrCode.stop().then(() => {
+                console.log("Scanner stopped.");
+                startScanBtn.textContent = "Scan Again";
+                startScanBtn.disabled = false;
+                startScanBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }).catch(err => {
+                console.error("Failed to stop scanner", err);
+            });
+
+            // Show result section and loading spinner
+            resultSection.classList.remove('hidden');
+            loadingSpinner.classList.remove('hidden');
+            productInfoDiv.innerHTML = ''; // Clear previous results
+            errorMessageDiv.classList.add('hidden'); // Hide previous errors
+
+            // Fetch data from Open Food Facts API
+            fetchProductData(decodedText);
+        }
+
+        // --- Failure Callback ---
+        // This function is called during scanning but doesn't mean it failed,
+        // it just means no QR code was found in a frame. We can ignore it.
+        function onScanFailure(error) {
+            // console.warn(`Code scan error = ${error}`);
+        }
+
+        // --- Fetch Product Data from API ---
+        async function fetchProductData(barcode) {
+            const apiUrl = `https://world.openfoodfacts.org/api/v0/product/${barcode}.json`;
+            
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const data = await response.json();
+
+                // Hide loading spinner
+                loadingSpinner.classList.add('hidden');
+                
+                // Check if the product was found
+                if (data.status === 1 && data.product) {
+                    displayProductData(data.product);
+                } else {
+                    throw new Error('Product not found in the database.');
+                }
+
+            } catch (error) {
+                console.error("Fetch error:", error);
+                loadingSpinner.classList.add('hidden');
+                errorMessageDiv.classList.remove('hidden');
+                errorMessageDiv.textContent = `Could not fetch data for barcode ${barcode}. The product may not be in the database.`;
+            }
+        }
+
+        // --- Display Product Data ---
+        function displayProductData(product) {
+            const productName = product.product_name || 'N/A';
+            const brands = product.brands || 'N/A';
+            const imageUrl = product.image_front_url || 'https://placehold.co/400x400/e2e8f0/cbd5e0?text=No+Image';
+            
+            // Simplified Nutriments
+            const energy = product.nutriments['energy-kcal_100g'] ? `${product.nutriments['energy-kcal_100g']} kcal` : 'N/A';
+            const fat = product.nutriments.fat_100g ? `${product.nutriments.fat_100g} g` : 'N/A';
+            const carbs = product.nutriments.carbohydrates_100g ? `${product.nutriments.carbohydrates_100g} g` : 'N/A';
+            const protein = product.nutriments.proteins_100g ? `${product.nutriments.proteins_100g} g` : 'N/A';
+            const sugar = product.nutriments.sugars_100g ? `${product.nutriments.sugars_100g} g` : 'N/A';
+
+            const ingredients = product.ingredients_text_with_allergens || 'No ingredients information available.';
+
+            productInfoDiv.innerHTML = `
+                <div class="flex flex-col md:flex-row gap-6 items-center">
+                    <img src="${imageUrl}" alt="Product Image" class="w-32 h-32 object-contain rounded-lg border">
+                    <div class="flex-1">
+                        <h3 class="text-xl font-bold">${productName}</h3>
+                        <p class="text-gray-500">${brands}</p>
+                    </div>
+                </div>
+                <div class="mt-6">
+                    <h4 class="font-semibold text-lg mb-2">Nutrition Facts (per 100g)</h4>
+                    <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                        <p><strong>Energy:</strong> ${energy}</p>
+                        <p><strong>Fat:</strong> ${fat}</p>
+                        <p><strong>Carbs:</strong> ${carbs}</p>
+                        <p><strong>Sugars:</strong> ${sugar}</p>
+                        <p><strong>Protein:</strong> ${protein}</p>
+                    </div>
+                </div>
+                 <div class="mt-6">
+                    <h4 class="font-semibold text-lg mb-2">Ingredients</h4>
+                    <p class="text-sm text-gray-600 bg-white p-3 rounded-md">${ingredients}</p>
+                </div>
+            `;
+        }
+
+    </script>
+</body>
+</html>
