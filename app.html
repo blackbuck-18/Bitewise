@@ -6,39 +6,127 @@
     <title>Bitewise App</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Firebase Libraries -->
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+
+        // --- 1. PASTE YOUR FIREBASE CONFIG HERE ---
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+        // -----------------------------------------
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        // --- DOM Elements ---
+        const authBtn = document.getElementById('auth-btn');
+        const authModal = document.getElementById('auth-modal');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const authForm = document.getElementById('auth-form');
+        const authTitle = document.getElementById('auth-title');
+        const emailInput = document.getElementById('email-input');
+        const passwordInput = document.getElementById('password-input');
+        const toggleAuthMode = document.getElementById('toggle-auth-mode');
+        const authError = document.getElementById('auth-error');
+        const loggedInStatus = document.getElementById('logged-in-status');
+        const logoutBtn = document.getElementById('logout-btn');
+
+        let isLoginMode = true;
+
+        // --- Auth State Listener ---
+        onAuthStateChanged(auth, user => {
+            if (user) {
+                // User is signed in
+                console.log('User is signed in:', user.email);
+                authBtn.classList.add('hidden');
+                loggedInStatus.classList.remove('hidden');
+                document.getElementById('user-email').textContent = user.email;
+                closeModal();
+            } else {
+                // User is signed out
+                console.log('User is signed out');
+                authBtn.classList.remove('hidden');
+                loggedInStatus.classList.add('hidden');
+            }
+        });
+
+        // --- Event Listeners ---
+        authBtn.addEventListener('click', () => authModal.classList.remove('hidden'));
+        closeModalBtn.addEventListener('click', closeModal);
+        logoutBtn.addEventListener('click', () => signOut(auth));
+
+        toggleAuthMode.addEventListener('click', () => {
+            isLoginMode = !isLoginMode;
+            authTitle.textContent = isLoginMode ? 'Login to your Account' : 'Create an Account';
+            authForm.querySelector('button[type="submit"]').textContent = isLoginMode ? 'Login' : 'Sign Up';
+            toggleAuthMode.textContent = isLoginMode ? 'Need an account? Sign Up' : 'Already have an account? Login';
+            authError.classList.add('hidden');
+        });
+
+        authForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            authError.classList.add('hidden');
+
+            if (isLoginMode) {
+                // Sign in user
+                signInWithEmailAndPassword(auth, email, password)
+                    .catch(error => {
+                        authError.textContent = error.message;
+                        authError.classList.remove('hidden');
+                    });
+            } else {
+                // Create new user
+                createUserWithEmailAndPassword(auth, email, password)
+                    .catch(error => {
+                        authError.textContent = error.message;
+                        authError.classList.remove('hidden');
+                    });
+            }
+        });
+
+        function closeModal() {
+            authModal.classList.add('hidden');
+            authError.classList.add('hidden');
+            authForm.reset();
+        }
+    </script>
+    
     <!-- TensorFlow.js Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@latest/dist/mobilenet.min.js"></script>
+    
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-radius: 50%;
-            border-top: 4px solid #3498db;
-            width: 40px;
-            height: 40px;
-            animation: spin 2s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .tab-active {
-            border-color: #22c55e; /* green-500 */
-            color: #16a34a; /* green-600 */
-            background-color: #f0fdf4; /* green-50 */
-        }
+        body { font-family: 'Inter', sans-serif; }
+        .loader { border: 4px solid #f3f3f3; border-radius: 50%; border-top: 4px solid #3498db; width: 40px; height: 40px; animation: spin 2s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .tab-active { border-color: #22c55e; color: #16a34a; background-color: #f0fdf4; }
     </style>
 </head>
 <body class="bg-gray-50">
 
     <!-- Header -->
-    <header class="bg-white shadow-sm">
-        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+    <header class="bg-white shadow-sm sticky top-0 z-40">
+        <nav class="container mx-auto px-6 py-3 flex justify-between items-center">
             <a href="index.html" class="text-2xl font-bold text-green-600">Bitewise</a>
-            <a href="index.html" class="text-gray-600 hover:text-green-600 px-4">&larr; Back to Home</a>
+            <div class="flex items-center gap-4">
+                 <div id="logged-in-status" class="hidden flex items-center gap-4">
+                    <span id="user-email" class="text-sm text-gray-600"></span>
+                    <button id="logout-btn" class="text-sm text-red-500 hover:underline">Logout</button>
+                </div>
+                <button id="auth-btn" class="bg-green-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-green-700 transition duration-300">Login / Sign Up</button>
+            </div>
         </nav>
     </header>
 
@@ -70,210 +158,211 @@
                 <div id="content-image" class="hidden">
                     <div class="text-center">
                         <h1 class="text-2xl font-bold text-gray-800">Identify Food from an Image</h1>
-                        <p class="text-gray-500 mt-2">Use your camera to identify a food item.</p>
+                        <p class="text-gray-500 mt-2">Upload a picture of a food item to find it.</p>
                     </div>
                     <div class="mt-6 text-center">
-                        <!-- THE FIX IS HERE: added capture="environment" -->
-                        <input type="file" id="image-upload-input" class="hidden" accept="image/*" capture="environment">
+                        <input type="file" id="image-upload-input" class="hidden" accept="image/*">
                         <button id="upload-btn" class="bg-blue-500 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-600 transition duration-300">
-                            Take Photo
+                            Upload or Take a Photo
                         </button>
                         <img id="uploaded-image" class="mt-4 rounded-lg max-h-64 mx-auto hidden" />
                     </div>
                 </div>
             </div>
 
-            <!-- Loading, Status and Error Section (Shared by both tabs) -->
+            <!-- Status and Results Sections -->
             <div id="status-section" class="text-center p-4 mt-4 hidden">
-                <div id="loader" class="loader mx-auto"></div>
+                <div class="loader mx-auto"></div>
                 <p id="status-text" class="text-gray-600 mt-2">Loading...</p>
             </div>
             <div id="error-message" class="mt-4 p-4 bg-red-100 text-red-700 rounded-lg hidden"></div>
-
-            <!-- Results Section (Shared by both tabs) -->
             <div id="results-section" class="mt-8">
                 <div id="search-results-list"></div>
                 <div id="product-info" class="mt-4"></div>
             </div>
-
         </div>
     </main>
+
+    <!-- Authentication Modal -->
+    <div id="auth-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-sm">
+            <div class="flex justify-between items-center mb-4">
+                <h2 id="auth-title" class="text-xl font-bold">Login to your Account</h2>
+                <button id="close-modal-btn" class="text-gray-500 hover:text-gray-800">&times;</button>
+            </div>
+            <form id="auth-form">
+                <div class="mb-4">
+                    <label for="email-input" class="block text-sm font-medium text-gray-700">Email Address</label>
+                    <input type="email" id="email-input" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500">
+                </div>
+                <div class="mb-6">
+                    <label for="password-input" class="block text-sm font-medium text-gray-700">Password</label>
+                    <input type="password" id="password-input" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500">
+                </div>
+                <div id="auth-error" class="mb-4 p-3 bg-red-100 text-red-700 rounded-md hidden"></div>
+                <button type="submit" class="w-full bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 transition duration-300">Login</button>
+            </form>
+            <button id="toggle-auth-mode" class="w-full mt-4 text-sm text-center text-blue-600 hover:underline">Need an account? Sign Up</button>
+        </div>
+    </div>
     
     <script>
-        // --- DOM Elements ---
-        const searchForm = document.getElementById('search-form');
-        const searchInput = document.getElementById('search-input');
-        const statusSection = document.getElementById('status-section');
-        const statusText = document.getElementById('status-text');
-        const errorMessageDiv = document.getElementById('error-message');
-        const searchResultsListDiv = document.getElementById('search-results-list');
-        const productInfoDiv = document.getElementById('product-info');
-        
-        // --- Tab Elements ---
-        const tabSearch = document.getElementById('tab-search');
-        const tabImage = document.getElementById('tab-image');
-        const contentSearch = document.getElementById('content-search');
-        const contentImage = document.getElementById('content-image');
+        // --- This script tag is for the main app logic (non-auth) ---
+        const searchForm_app = document.getElementById('search-form');
+        const searchInput_app = document.getElementById('search-input');
+        const statusSection_app = document.getElementById('status-section');
+        const statusText_app = document.getElementById('status-text');
+        const errorMessageDiv_app = document.getElementById('error-message');
+        const searchResultsListDiv_app = document.getElementById('search-results-list');
+        const productInfoDiv_app = document.getElementById('product-info');
+        const tabSearch_app = document.getElementById('tab-search');
+        const tabImage_app = document.getElementById('tab-image');
+        const contentSearch_app = document.getElementById('content-search');
+        const contentImage_app = document.getElementById('content-image');
+        const uploadBtn_app = document.getElementById('upload-btn');
+        const imageUploadInput_app = document.getElementById('image-upload-input');
+        const uploadedImage_app = document.getElementById('uploaded-image');
+        let model_app;
 
-        // --- Image Recognition Elements ---
-        const uploadBtn = document.getElementById('upload-btn');
-        const imageUploadInput = document.getElementById('image-upload-input');
-        const uploadedImage = document.getElementById('uploaded-image');
-        let model; // To hold the loaded MobileNet model
-
-        // --- Tab Switching Logic ---
-        tabSearch.addEventListener('click', () => {
-            contentSearch.classList.remove('hidden');
-            contentImage.classList.add('hidden');
-            tabSearch.classList.add('tab-active');
-            tabImage.classList.remove('tab-active');
+        tabSearch_app.addEventListener('click', () => {
+            contentSearch_app.classList.remove('hidden');
+            contentImage_app.classList.add('hidden');
+            tabSearch_app.classList.add('tab-active');
+            tabImage_app.classList.remove('tab-active');
         });
 
-        tabImage.addEventListener('click', () => {
-            contentImage.classList.remove('hidden');
-            contentSearch.classList.add('hidden');
-            tabImage.classList.add('tab-active');
-            tabSearch.classList.remove('tab-active');
-            // Load the model only when the tab is clicked for the first time
-            if (!model) {
-                loadModel();
-            }
+        tabImage_app.addEventListener('click', () => {
+            contentImage_app.classList.remove('hidden');
+            contentSearch_app.classList.add('hidden');
+            tabImage_app.classList.add('tab-active');
+            tabSearch_app.classList.remove('tab-active');
+            if (!model_app) loadModel_app();
         });
 
-        // --- Clear Results and Errors ---
-        function clearState() {
-            searchResultsListDiv.innerHTML = '';
-            productInfoDiv.innerHTML = '';
-            errorMessageDiv.classList.add('hidden');
-            statusSection.classList.add('hidden');
+        function clearState_app() {
+            searchResultsListDiv_app.innerHTML = '';
+            productInfoDiv_app.innerHTML = '';
+            errorMessageDiv_app.classList.add('hidden');
+            statusSection_app.classList.add('hidden');
         }
 
-        // --- Show Status ---
-        function showStatus(text) {
-            clearState();
-            statusText.textContent = text;
-            statusSection.classList.remove('hidden');
+        function showStatus_app(text) {
+            clearState_app();
+            statusText_app.textContent = text;
+            statusSection_app.classList.remove('hidden');
         }
 
-        // --- Search by Name Logic ---
-        searchForm.addEventListener('submit', (event) => {
+        searchForm_app.addEventListener('submit', (event) => {
             event.preventDefault();
-            const query = searchInput.value.trim();
+            const query = searchInput_app.value.trim();
             if (query) {
-                showStatus('Searching for products...');
-                searchProducts(query);
+                showStatus_app('Searching for products...');
+                searchProducts_app(query);
             }
         });
 
-        // --- Image Recognition Logic ---
-        uploadBtn.addEventListener('click', () => imageUploadInput.click());
-        imageUploadInput.addEventListener('change', (event) => {
+        uploadBtn_app.addEventListener('click', () => imageUploadInput_app.click());
+        imageUploadInput_app.addEventListener('change', (event) => {
             const file = event.target.files[0];
             if (file) {
                 const reader = new FileReader();
                 reader.onload = (e) => {
-                    uploadedImage.src = e.target.result;
-                    uploadedImage.classList.remove('hidden');
-                    predictImage();
+                    uploadedImage_app.src = e.target.result;
+                    uploadedImage_app.classList.remove('hidden');
+                    predictImage_app();
                 };
                 reader.readAsDataURL(file);
             }
         });
 
-        async function loadModel() {
-            showStatus('Loading AI model, please wait...');
+        async function loadModel_app() {
+            showStatus_app('Loading AI model, please wait...');
             try {
-                model = await mobilenet.load();
-                statusSection.classList.add('hidden'); // Hide status once model is loaded
+                model_app = await mobilenet.load();
+                statusSection_app.classList.add('hidden');
                 console.log('Model loaded successfully');
             } catch (err) {
                 console.error('Failed to load model', err);
-                errorMessageDiv.textContent = 'Error: Could not load the AI model.';
-                errorMessageDiv.classList.remove('hidden');
-                statusSection.classList.add('hidden');
+                errorMessageDiv_app.textContent = 'Error: Could not load the AI model.';
+                errorMessageDiv_app.classList.remove('hidden');
+                statusSection_app.classList.add('hidden');
             }
         }
 
-        async function predictImage() {
-            if (!model) {
-                errorMessageDiv.textContent = 'Model is not loaded yet. Please wait.';
-                errorMessageDiv.classList.remove('hidden');
+        async function predictImage_app() {
+            if (!model_app) {
+                errorMessageDiv_app.textContent = 'Model is not loaded yet. Please wait.';
+                errorMessageDiv_app.classList.remove('hidden');
                 return;
             }
-            showStatus('Analyzing image...');
+            showStatus_app('Analyzing image...');
             try {
-                const predictions = await model.classify(uploadedImage);
-                console.log('Predictions: ', predictions);
+                const predictions = await model_app.classify(uploadedImage_app);
                 if (predictions && predictions.length > 0) {
-                    // Use the top prediction as the search query
-                    const topPrediction = predictions[0].className.split(',')[0]; // Take the most likely class name
-                    showStatus(`Image identified as: ${topPrediction}. Searching for products...`);
-                    searchProducts(topPrediction);
+                    const topPrediction = predictions[0].className.split(',')[0];
+                    showStatus_app(`Image identified as: ${topPrediction}. Searching for products...`);
+                    searchProducts_app(topPrediction);
                 } else {
                     throw new Error('Could not identify a food item in the image.');
                 }
             } catch (err) {
-                console.error('Prediction failed', err);
-                statusSection.classList.add('hidden');
-                errorMessageDiv.textContent = err.message;
-                errorMessageDiv.classList.remove('hidden');
+                statusSection_app.classList.add('hidden');
+                errorMessageDiv_app.textContent = err.message;
+                errorMessageDiv_app.classList.remove('hidden');
             }
         }
         
-        // --- API and Display Logic (Shared) ---
-        async function searchProducts(query) {
+        async function searchProducts_app(query) {
             const searchUrl = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=10`;
             try {
                 const response = await fetch(searchUrl);
                 const data = await response.json();
-                statusSection.classList.add('hidden');
+                statusSection_app.classList.add('hidden');
                 if (data.products && data.products.length > 0) {
-                    displaySearchResults(data.products);
+                    displaySearchResults_app(data.products);
                 } else {
                     throw new Error(`No products found for "${query}".`);
                 }
             } catch (error) {
-                console.error("Search error:", error);
-                statusSection.classList.add('hidden');
-                errorMessageDiv.textContent = error.message;
-                errorMessageDiv.classList.remove('hidden');
+                statusSection_app.classList.add('hidden');
+                errorMessageDiv_app.textContent = error.message;
+                errorMessageDiv_app.classList.remove('hidden');
             }
         }
 
-        function displaySearchResults(products) {
+        function displaySearchResults_app(products) {
             let resultsHtml = '<h3 class="text-lg font-semibold mb-2">Search Results:</h3><div class="space-y-2">';
             products.forEach(product => {
-                resultsHtml += `<button onclick="fetchProductByBarcode('${product.id}')" class="w-full text-left p-3 bg-gray-100 hover:bg-green-100 rounded-lg transition duration-200"><p class="font-semibold">${product.product_name || 'Unnamed'}</p><p class="text-sm text-gray-600">${product.brands || ''}</p></button>`;
+                resultsHtml += `<button onclick="fetchProductByBarcode_app('${product.id}')" class="w-full text-left p-3 bg-gray-100 hover:bg-green-100 rounded-lg transition duration-200"><p class="font-semibold">${product.product_name || 'Unnamed'}</p><p class="text-sm text-gray-600">${product.brands || ''}</p></button>`;
             });
             resultsHtml += '</div>';
-            searchResultsListDiv.innerHTML = resultsHtml;
+            searchResultsListDiv_app.innerHTML = resultsHtml;
         }
 
-        async function fetchProductByBarcode(barcode) {
-            showStatus('Fetching product details...');
+        async function fetchProductByBarcode_app(barcode) {
+            showStatus_app('Fetching product details...');
             const productUrl = `https://world.openfoodfacts.org/api/v0/product/${barcode}.json`;
             try {
                 const response = await fetch(productUrl);
                 const data = await response.json();
-                statusSection.classList.add('hidden');
+                statusSection_app.classList.add('hidden');
                 if (data.status === 1 && data.product) {
-                    displayProductData(data.product);
+                    displayProductData_app(data.product);
                 } else {
                     throw new Error('Could not retrieve details for this product.');
                 }
             } catch (error) {
-                console.error("Fetch error:", error);
-                statusSection.classList.add('hidden');
-                errorMessageDiv.textContent = error.message;
-                errorMessageDiv.classList.remove('hidden');
+                statusSection_app.classList.add('hidden');
+                errorMessageDiv_app.textContent = error.message;
+                errorMessageDiv_app.classList.remove('hidden');
             }
         }
 
-        function displayProductData(product) {
-            searchResultsListDiv.innerHTML = ''; // Clear the search list
+        function displayProductData_app(product) {
+            searchResultsListDiv_app.innerHTML = '';
             const p = product;
             const imageUrl = p.image_front_url || 'https://placehold.co/400x400/e2e8f0/cbd5e0?text=No+Image';
-            productInfoDiv.innerHTML = `
+            productInfoDiv_app.innerHTML = `
                 <div class="flex flex-col md:flex-row gap-6 items-center border-b pb-4">
                     <img src="${imageUrl}" alt="Product Image" class="w-32 h-32 object-contain rounded-lg border" onerror="this.onerror=null;this.src='https://placehold.co/400x400/e2e8f0/cbd5e0?text=No+Image';">
                     <div class="flex-1 text-center md:text-left">
@@ -297,11 +386,10 @@
                 </div>
             `;
         }
-
+        
         // Make functions available globally so inline onclick handlers can access them
-        window.fetchProductByBarcode = fetchProductByBarcode;
+        window.fetchProductByBarcode_app = fetchProductByBarcode_app;
 
     </script>
 </body>
 </html>
-
