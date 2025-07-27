@@ -1,6 +1,6 @@
 # Bitewise
 AI-powered food scanner to promote nutritional awareness.
-This project is currently in development.
+This project is currently in devlopmopment.
 
 ## ✨ Key Features
 
@@ -25,4 +25,4 @@ Instructions on how to run this project locally will be added here soon.
 
 ## 👨‍💻 About the Developer
 
-This project is being developed by **Bhukya Krishna Chaitanya**, an aspiring AI/ML Engineer passionate about leveraging technology for social good, particularly in the healthcare and food-tech sectors.
+This project is being developed by **Bhukya Krishna Chaitanya**, an aspiring AI/ML Engineer passionate about leveraging technology for social good, particularly in the healthcare and food-tech sectors.sri adithya
