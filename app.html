@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitewise App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- TensorFlow.js Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@latest/dist/mobilenet.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-radius: 50%;
+            border-top: 4px solid #3498db;
+            width: 40px;
+            height: 40px;
+            animation: spin 2s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .tab-active {
+            border-color: #22c55e; /* green-500 */
+            color: #16a34a; /* green-600 */
+            background-color: #f0fdf4; /* green-50 */
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="index.html" class="text-2xl font-bold text-green-600">Bitewise</a>
+            <a href="index.html" class="text-gray-600 hover:text-green-600 px-4">&larr; Back to Home</a>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-6 py-12">
+        <div class="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-md">
+            
+            <!-- Tab Navigation -->
+            <div class="flex border-b mb-6">
+                <button id="tab-search" class="flex-1 py-2 px-4 text-center font-semibold text-gray-600 border-b-2 tab-active">Search by Name</button>
+                <button id="tab-image" class="flex-1 py-2 px-4 text-center font-semibold text-gray-500 border-b-2">Search by Image</button>
+            </div>
+
+            <!-- Tab Content -->
+            <div>
+                <!-- Search by Name Tab -->
+                <div id="content-search">
+                    <div class="text-center">
+                        <h1 class="text-2xl font-bold text-gray-800">Search for a Food Product</h1>
+                        <p class="text-gray-500 mt-2">Enter a product name like "Coca-Cola" or "Oreo".</p>
+                    </div>
+                    <form id="search-form" class="mt-6 flex gap-2">
+                        <input type="text" id="search-input" class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent" placeholder="e.g., Nutella" required>
+                        <button type="submit" class="bg-green-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-green-700 transition duration-300">Search</button>
+                    </form>
+                </div>
+
+                <!-- Search by Image Tab -->
+                <div id="content-image" class="hidden">
+                    <div class="text-center">
+                        <h1 class="text-2xl font-bold text-gray-800">Identify Food from an Image</h1>
+                        <p class="text-gray-500 mt-2">Upload a picture of a food item to find it.</p>
+                    </div>
+                    <div class="mt-6 text-center">
+                        <input type="file" id="image-upload-input" class="hidden" accept="image/*">
+                        <button id="upload-btn" class="bg-blue-500 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-600 transition duration-300">
+                            Upload or Take a Photo
+                        </button>
+                        <img id="uploaded-image" class="mt-4 rounded-lg max-h-64 mx-auto hidden" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading, Status and Error Section (Shared by both tabs) -->
+            <div id="status-section" class="text-center p-4 mt-4 hidden">
+                <div id="loader" class="loader mx-auto"></div>
+                <p id="status-text" class="text-gray-600 mt-2">Loading...</p>
+            </div>
+            <div id="error-message" class="mt-4 p-4 bg-red-100 text-red-700 rounded-lg hidden"></div>
+
+            <!-- Results Section (Shared by both tabs) -->
+            <div id="results-section" class="mt-8">
+                <div id="search-results-list"></div>
+                <div id="product-info" class="mt-4"></div>
+            </div>
+
+        </div>
+    </main>
+    
+    <script>
+        // --- DOM Elements ---
+        const searchForm = document.getElementById('search-form');
+        const searchInput = document.getElementById('search-input');
+        const statusSection = document.getElementById('status-section');
+        const statusText = document.getElementById('status-text');
+        const errorMessageDiv = document.getElementById('error-message');
+        const searchResultsListDiv = document.getElementById('search-results-list');
+        const productInfoDiv = document.getElementById('product-info');
+        
+        // --- Tab Elements ---
+        const tabSearch = document.getElementById('tab-search');
+        const tabImage = document.getElementById('tab-image');
+        const contentSearch = document.getElementById('content-search');
+        const contentImage = document.getElementById('content-image');
+
+        // --- Image Recognition Elements ---
+        const uploadBtn = document.getElementById('upload-btn');
+        const imageUploadInput = document.getElementById('image-upload-input');
+        const uploadedImage = document.getElementById('uploaded-image');
+        let model; // To hold the loaded MobileNet model
+
+        // --- Tab Switching Logic ---
+        tabSearch.addEventListener('click', () => {
+            contentSearch.classList.remove('hidden');
+            contentImage.classList.add('hidden');
+            tabSearch.classList.add('tab-active');
+            tabImage.classList.remove('tab-active');
+        });
+
+        tabImage.addEventListener('click', () => {
+            contentImage.classList.remove('hidden');
+            contentSearch.classList.add('hidden');
+            tabImage.classList.add('tab-active');
+            tabSearch.classList.remove('tab-active');
+            // Load the model only when the tab is clicked for the first time
+            if (!model) {
+                loadModel();
+            }
+        });
+
+        // --- Clear Results and Errors ---
+        function clearState() {
+            searchResultsListDiv.innerHTML = '';
+            productInfoDiv.innerHTML = '';
+            errorMessageDiv.classList.add('hidden');
+            statusSection.classList.add('hidden');
+        }
+
+        // --- Show Status ---
+        function showStatus(text) {
+            clearState();
+            statusText.textContent = text;
+            statusSection.classList.remove('hidden');
+        }
+
+        // --- Search by Name Logic ---
+        searchForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const query = searchInput.value.trim();
+            if (query) {
+                showStatus('Searching for products...');
+                searchProducts(query);
+            }
+        });
+
+        // --- Image Recognition Logic ---
+        uploadBtn.addEventListener('click', () => imageUploadInput.click());
+        imageUploadInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    uploadedImage.src = e.target.result;
+                    uploadedImage.classList.remove('hidden');
+                    predictImage();
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        async function loadModel() {
+            showStatus('Loading AI model, please wait...');
+            try {
+                model = await mobilenet.load();
+                statusSection.classList.add('hidden'); // Hide status once model is loaded
+                console.log('Model loaded successfully');
+            } catch (err) {
+                console.error('Failed to load model', err);
+                errorMessageDiv.textContent = 'Error: Could not load the AI model.';
+                errorMessageDiv.classList.remove('hidden');
+                statusSection.classList.add('hidden');
+            }
+        }
+
+        async function predictImage() {
+            if (!model) {
+                errorMessageDiv.textContent = 'Model is not loaded yet. Please wait.';
+                errorMessageDiv.classList.remove('hidden');
+                return;
+            }
+            showStatus('Analyzing image...');
+            try {
+                const predictions = await model.classify(uploadedImage);
+                console.log('Predictions: ', predictions);
+                if (predictions && predictions.length > 0) {
+                    // Use the top prediction as the search query
+                    const topPrediction = predictions[0].className.split(',')[0]; // Take the most likely class name
+                    showStatus(`Image identified as: ${topPrediction}. Searching for products...`);
+                    searchProducts(topPrediction);
+                } else {
+                    throw new Error('Could not identify a food item in the image.');
+                }
+            } catch (err) {
+                console.error('Prediction failed', err);
+                statusSection.classList.add('hidden');
+                errorMessageDiv.textContent = err.message;
+                errorMessageDiv.classList.remove('hidden');
+            }
+        }
+        
+        // --- API and Display Logic (Shared) ---
+        async function searchProducts(query) {
+            const searchUrl = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=10`;
+            try {
+                const response = await fetch(searchUrl);
+                const data = await response.json();
+                statusSection.classList.add('hidden');
+                if (data.products && data.products.length > 0) {
+                    displaySearchResults(data.products);
+                } else {
+                    throw new Error(`No products found for "${query}".`);
+                }
+            } catch (error) {
+                console.error("Search error:", error);
+                statusSection.classList.add('hidden');
+                errorMessageDiv.textContent = error.message;
+                errorMessageDiv.classList.remove('hidden');
+            }
+        }
+
+        function displaySearchResults(products) {
+            let resultsHtml = '<h3 class="text-lg font-semibold mb-2">Search Results:</h3><div class="space-y-2">';
+            products.forEach(product => {
+                resultsHtml += `<button onclick="fetchProductByBarcode('${product.id}')" class="w-full text-left p-3 bg-gray-100 hover:bg-green-100 rounded-lg transition duration-200"><p class="font-semibold">${product.product_name || 'Unnamed'}</p><p class="text-sm text-gray-600">${product.brands || ''}</p></button>`;
+            });
+            resultsHtml += '</div>';
+            searchResultsListDiv.innerHTML = resultsHtml;
+        }
+
+        async function fetchProductByBarcode(barcode) {
+            showStatus('Fetching product details...');
+            const productUrl = `https://world.openfoodfacts.org/api/v0/product/${barcode}.json`;
+            try {
+                const response = await fetch(productUrl);
+                const data = await response.json();
+                statusSection.classList.add('hidden');
+                if (data.status === 1 && data.product) {
+                    displayProductData(data.product);
+                } else {
+                    throw new Error('Could not retrieve details for this product.');
+                }
+            } catch (error) {
+                console.error("Fetch error:", error);
+                statusSection.classList.add('hidden');
+                errorMessageDiv.textContent = error.message;
+                errorMessageDiv.classList.remove('hidden');
+            }
+        }
+
+        function displayProductData(product) {
+            searchResultsListDiv.innerHTML = ''; // Clear the search list
+            const p = product;
+            const imageUrl = p.image_front_url || 'https://placehold.co/400x400/e2e8f0/cbd5e0?text=No+Image';
+            productInfoDiv.innerHTML = `
+                <div class="flex flex-col md:flex-row gap-6 items-center border-b pb-4">
+                    <img src="${imageUrl}" alt="Product Image" class="w-32 h-32 object-contain rounded-lg border" onerror="this.onerror=null;this.src='https://placehold.co/400x400/e2e8f0/cbd5e0?text=No+Image';">
+                    <div class="flex-1 text-center md:text-left">
+                        <h3 class="text-2xl font-bold">${p.product_name || 'N/A'}</h3>
+                        <p class="text-gray-500">${p.brands || 'N/A'}</p>
+                    </div>
+                </div>
+                <div class="mt-6">
+                    <h4 class="font-semibold text-lg mb-2">Nutrition Facts (per 100g)</h4>
+                    <div class="grid grid-cols-2 gap-x-4 gap-y-2 bg-gray-50 p-4 rounded-lg">
+                        <p><strong>Energy:</strong> ${p.nutriments['energy-kcal_100g'] || 'N/A'} kcal</p>
+                        <p><strong>Fat:</strong> ${p.nutriments.fat_100g || 'N/A'} g</p>
+                        <p><strong>Carbs:</strong> ${p.nutriments.carbohydrates_100g || 'N/A'} g</p>
+                        <p><strong>Sugars:</strong> ${p.nutriments.sugars_100g || 'N/A'} g</p>
+                        <p><strong>Protein:</strong> ${p.nutriments.proteins_100g || 'N/A'} g</p>
+                    </div>
+                </div>
+                 <div class="mt-6">
+                    <h4 class="font-semibold text-lg mb-2">Ingredients</h4>
+                    <p class="text-sm text-gray-600 bg-gray-50 p-4 rounded-lg">${p.ingredients_text_with_allergens || 'No ingredients information available.'}</p>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
